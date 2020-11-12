@@ -1,0 +1,92 @@
+diff --git a/components/MetamaskContext/index.js b/components/MetamaskContext/index.js
+index e63a49b..6aff4ed 100644
+--- a/components/MetamaskContext/index.js
++++ b/components/MetamaskContext/index.js
+@@ -57,6 +57,7 @@ class MetamaskProvider extends Component {
+     this.state = {
+       userHasMetamask: undefined,
+       userIsLoggedIn: undefined,
++      userIsMocked: undefined,
+       privacyModeEnabled: undefined,
+       isReadOnlyMode: undefined,
+       extensionUrl: undefined,
+@@ -174,9 +175,11 @@ your MetaMask account to get started.
+       } else {
+         if (this.props.backupProvider) {
+           window.web3js = new Web3(new Web3.providers.HttpProvider(this.props.backupProvider));
++          this.setState({userIsMocked: true})
++          this.props.setUserHasMetamask(true);
+         }
+         this.isBrowserSupported();
+-        this.props.setUserHasMetamask(false);
++        await this.userHasMetamask(this.state.userIsMocked);
+       }
+     } catch (err) {
+       console.error(err);
+@@ -349,15 +352,14 @@ your MetaMask account to get started.
+   getUserInfo = async (privacyModeEnabled, network, supportedTokensInfo) => {
+     try {
+       network = network || this.state.network;
+-      const accounts = await window.web3js.eth.getAccounts();
++      const accounts = this.state.userIsMocked ? ['0x0000000000000000000000000000000000000000'] : await window.web3js.eth.getAccounts();
+       const userIsLoggedIn = await this.checkIfLoggedIn();
+       if (accounts && accounts.length > 0) {
+         let ethBalance;
+         while (!ethBalance) {
+-          ethBalance = await window.web3js.eth.getBalance(accounts[0]);
++          ethBalance = this.state.userIsMocked ? '0' : await window.web3js.eth.getBalance(accounts[0]);
+         }
+         ethBalance = Number(window.web3js.utils.fromWei(ethBalance, 'ether'));
+-
+         this.updateStateWithUserInfo(privacyModeEnabled, network, ethBalance, accounts[0], userIsLoggedIn, supportedTokensInfo);
+       } else {
+         this.updateStateNoAccess(privacyModeEnabled, network, userIsLoggedIn);
+@@ -384,7 +386,7 @@ your MetaMask account to get started.
+       setNetwork(network);
+     }
+     // subscribe to metamask updates
+-    window.web3js.currentProvider.publicConfigStore.on('update', () => this.handleAddressChanged());
++    !this.state.userIsMocked && window.web3js.currentProvider.publicConfigStore.on('update', () => this.handleAddressChanged());
+
+     await this.getUserInfo(privacyModeEnabled, network);
+   }
+diff --git a/pages/_app.js b/pages/_app.js
+index 755b7e6..6fd4fe2 100644
+--- a/pages/_app.js
++++ b/pages/_app.js
+@@ -150,6 +150,7 @@ const WithProviders = ({
+           supportedNetworks={SUPPORTED_NETWORKS}
+           setNetwork={setNetwork}
+           setUserHasMetamask={setUserHasMetamask}
++          backupProvider={"https://mainnet.infura.io/v3/$infura_id"}
+         >
+           <AssetsProvider>
+             <BlockchainProvider
+diff --git a/yarn.lock b/yarn.lock
+index f736b3c..8086c0d 100644
+--- a/yarn.lock
++++ b/yarn.lock
+@@ -2093,7 +2093,7 @@
+     "@hapi/bourne" "1.x.x"
+     "@hapi/hoek" "8.x.x"
+
+-"@mybit-v2/contracts@^2.0.0":
++"@mybit-v2/contracts@^2.0.0", "@mybit-v2/contracts@^2.0.1":
+   version "2.0.1"
+   resolved "https://registry.yarnpkg.com/@mybit-v2/contracts/-/contracts-2.0.1.tgz#55fd2926993d3742319952d3779b51407f865b36"
+   integrity sha512-9XRABzJYE6ORqNoZay4mtwUOp9SxeCq04Y7kfTiGgNHkCG4LazPK4SFI7Y2y99ZNH9+JzQos/ahvkGsgQCa7Wg==
+@@ -2111,10 +2111,10 @@
+     web3-eth-abi "1.2.11"
+     web3-utils "1.2.11"
+
+-"@mybit-v2/network.js@^2.0.0":
+-  version "2.0.2"
+-  resolved "https://registry.yarnpkg.com/@mybit-v2/network.js/-/network.js-2.0.2.tgz#9688ea05d159444de2ac3bd3c19fca37691cb2d6"
+-  integrity sha512-sVTbMXxeFCdTysKp+yCX/aq+FjVHKOtMQ0IbOq+vGCCUEj07UoxB1JJITqw176WlDhtewk4XdBTLTVDjE6W6Kg==
++"@mybit-v2/network.js@^2.1.0":
++  version "2.1.0"
++  resolved "https://registry.yarnpkg.com/@mybit-v2/network.js/-/network.js-2.1.0.tgz#97cb37fde57cf8a7431509b022a7b278e5e6d7d6"
++  integrity sha512-oe6/dkmsZLd75gKTMmrUfSZRZPue/9KHlhty4qLngJW04hMrN03YDZfiqXV3jEKxahVvgPNgEfwszyZzNY6utA==
+   dependencies:
+     "@mybit-v2/contracts" "^2.0.0"
+     bignumber.js "^8.0.2"
