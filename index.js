@@ -16,6 +16,6 @@ module.exports = {
     mybit : '0',
     ropsten : '6054029',
     rinkeby : '4780593',
-    mainnet : '8215075',
+    mainnet : '10816000',
   }
 };
